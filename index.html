@@ -248,7 +248,7 @@
         
           <h1 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2019/08/12/Jdata/" itemprop="url">Untitled</a></h1>
+                <a class="post-title-link" href="/2019/08/12/Jdata/" itemprop="url">2019JDATA-Top40分享</a></h1>
         
 
         <div class="post-meta">
@@ -300,45 +300,23 @@
       
         
           
-            <h1 id="2019JDATA-Top40分享"><a href="#2019JDATA-Top40分享" class="headerlink" title="2019JDATA-Top40分享"></a>2019JDATA-Top40分享</h1><p>赛题背景链接:<a href="https://jdata.jd.com/html/detail.html?id=8" target="_blank" rel="noopener">https://jdata.jd.com/html/detail.html?id=8</a></p>
-<p>下面分为以下几个部分：</p>
-<ol>
-<li>嗯，写在前面</li>
-<li>特征</li>
-<li>模型</li>
-<li>小tips</li>
-<li>没尝试的点</li>
-<li>从优秀的选手中学习到的<h2 id="1-嗯，写在前面"><a href="#1-嗯，写在前面" class="headerlink" title="1. 嗯，写在前面:"></a>1. 嗯，写在前面:</h2>初次个人参加数据挖掘比赛，希望能够通过这份总结自己有所提高，也希望多与比赛中优秀的选手多多学习交流。<h2 id="2-特征"><a href="#2-特征" class="headerlink" title="2. 特征"></a>2. 特征</h2></li>
-<li><p>对离散值进行one-hot编码</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">def get_basic_user_feat():</span><br><span class="line">    #减少数据占用内存</span><br><span class="line">    user = reduce_mem_usage(pd.read_csv(user_path))</span><br><span class="line">    #one-hot</span><br><span class="line">    age_df = pd.get_dummies(user[&quot;age&quot;], prefix=&quot;age&quot;)</span><br><span class="line">    sex_df = pd.get_dummies(user[&quot;sex&quot;], prefix=&quot;sex&quot;)</span><br><span class="line">    city_level_df = pd.get_dummies(user[&quot;city_level&quot;], prefix=&quot;city_level&quot;)</span><br><span class="line">    user_lv_df = pd.get_dummies(user[&quot;user_lv_cd&quot;], prefix=&quot;user_lv_cd&quot;)</span><br><span class="line">    user = pd.concat([user[&apos;user_id&apos;], age_df, sex_df, user_lv_df,city_level_df], axis=1)</span><br><span class="line">    return user</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>对一段时间内的5种行为的次数进行统计（这里注意有些时间段的行为次数可能为0，例如行为5加入购物车在前面的一大段时间是没有的）计算的方法是在时间维度做了扩展，例如过去7天或者10天的次数统计，分别在过去的1, 2, 3, 5, 7, 10, 15, 21, 30天做了行为次数统计。</p>
-</li>
-<li><p>评论的特征做了进行离散化，再进行one-hot。将好坏评论的数目计算为好评率和差评率。</p>
-</li>
-</ol>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">def convert_comments(comments_num):</span><br><span class="line">    if comments_num == 0:</span><br><span class="line">        return 0</span><br><span class="line">    elif comments_num == 1:</span><br><span class="line">        return 1</span><br><span class="line">    elif ((comments_num&gt;=2) and (comments_num&lt;=10)) :</span><br><span class="line">        return 2</span><br><span class="line">    elif ((comments_num&gt;=11) and (comments_num&lt;=50)) :</span><br><span class="line">        return 3</span><br><span class="line">    elif (comments_num&gt; 50):</span><br><span class="line">        return 4</span><br><span class="line">    else:</span><br><span class="line">        return 0</span><br></pre></td></tr></table></figure>
-<ol start="4">
-<li>用户其他行为转化为购买行为的次数的比例（比较重要的特征）</li>
-</ol>
-<h2 id="3-模型"><a href="#3-模型" class="headerlink" title="3. 模型"></a>3. 模型</h2><ol>
-<li>训练集测试集划分：训练集的划分是将3.8-4.15的数据作为训练集，其中3.8-4.8的数据作为训练集数据特征获取的部分，4.9-4.15的数据作为标签构建。测试集使用3.15-4.15的数据作为测试集的特征获取部分的数据来源，预测未来的4.16-4.22的购买情况。</li>
-<li>正负样本定义：期间发生购买行为的数据为正样本，其余为负样本。</li>
-<li>我使用的是xgboost模型，80%的数据作为训练集，20%作为测试集进行模型的训练，考虑正负样本的不平衡，调整了参数scale_pos_weight</li>
-<li>训练好的模型的输出概率中选取概率值大于0.7的视为正样本。（尝试了不同的值，0.7的效果是相对较好的）</li>
-<li>最后的结果进行去重：用户对品类下的店铺只会购买一次。所以对同一用户id下的shop-id进行去重。<h2 id="4-小tips"><a href="#4-小tips" class="headerlink" title="4. 小tips"></a>4. 小tips</h2>由于数据量相对来说还是比较大的，所以在读入数据的时候进行了一个小的处理，减少数据占用内存的大小。（参考来自kaggle的处理方法）<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">def reduce_mem_usage(df, verbose=True):</span><br><span class="line">    numerics = [&apos;int16&apos;, &apos;int32&apos;, &apos;int64&apos;, &apos;float16&apos;, &apos;float32&apos;, &apos;float64&apos;]</span><br><span class="line">    start_mem = df.memory_usage().sum() / 1024**2</span><br><span class="line">    for col in df.columns:</span><br><span class="line">        col_type = df[col].dtypes</span><br><span class="line">        if col_type in numerics:</span><br><span class="line">            c_min = df[col].min()</span><br><span class="line">            c_max = df[col].max()</span><br><span class="line">            if str(col_type)[:3] == &apos;int&apos;:</span><br><span class="line">                if c_min &gt; np.iinfo(np.int8).min and c_max &lt; np.iinfo(np.int8).max:</span><br><span class="line">                    df[col] = df[col].astype(np.int8)</span><br><span class="line">                elif c_min &gt; np.iinfo(np.int16).min and c_max &lt; np.iinfo(np.int16).max:</span><br><span class="line">                    df[col] = df[col].astype(np.int16)</span><br><span class="line">                elif c_min &gt; np.iinfo(np.int32).min and c_max &lt; np.iinfo(np.int32).max:</span><br><span class="line">                    df[col] = df[col].astype(np.int32)</span><br><span class="line">                elif c_min &gt; np.iinfo(np.int64).min and c_max &lt; np.iinfo(np.int64).max:</span><br><span class="line">                    df[col] = df[col].astype(np.int64)</span><br><span class="line">            else:</span><br><span class="line">                if c_min &gt; np.finfo(np.float16).min and c_max &lt; np.finfo(np.float16).max:</span><br><span class="line">                    df[col] = df[col].astype(np.float16)</span><br><span class="line">                elif c_min &gt; np.finfo(np.float32).min and c_max &lt; np.finfo(np.float32).max:</span><br><span class="line">                    df[col] = df[col].astype(np.float32)</span><br><span class="line">                else:</span><br><span class="line">                    df[col] = df[col].astype(np.float64)</span><br><span class="line">    end_mem = df.memory_usage().sum() / 1024**2</span><br><span class="line">    if verbose: print(&apos;Mem. usage decreased to &#123;:5.2f&#125; Mb (&#123;:.1f&#125;% reduction)&apos;.format(end_mem, 100 * (start_mem - end_mem) / start_mem))</span><br><span class="line">    return df</span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-<h2 id="5-没尝试的点"><a href="#5-没尝试的点" class="headerlink" title="5. 没尝试的点"></a>5. 没尝试的点</h2><ol>
-<li>对于时间的特征没有做好权重的区分，例如在时间靠前一点的特征相比较于时间较前的特征赋予更大的权重。</li>
-<li>模型融合<h2 id="6-从优秀者中学习到的点（以及本人的不足之处）"><a href="#6-从优秀者中学习到的点（以及本人的不足之处）" class="headerlink" title="6. 从优秀者中学习到的点（以及本人的不足之处）"></a>6. 从优秀者中学习到的点（以及本人的不足之处）</h2></li>
-<li>EDA要做好，例如要先看下训练集的日期与行为的分布情况，由于一些特殊的日期（例如春节）可能会使得训练数据和测试数据分布不一致，所以要做一个事先的过滤。</li>
-<li>构建时间相关的特征应注意剔除掉特殊的日期</li>
-<li>特征的构造要考虑长期的特征（全部日期的统计数据）</li>
-<li>在构造训练集和测试集中的一些考虑（可参考：<a href="https://zhuanlan.zhihu.com/p/71938382?utm_source=com.tencent.tim&amp;utm_medium=social&amp;utm_oi=555381879923224576" target="_blank" rel="noopener">https://zhuanlan.zhihu.com/p/71938382?utm_source=com.tencent.tim&amp;utm_medium=social&amp;utm_oi=555381879923224576</a> ）</li>
-</ol>
+          2019JDATA-Top40分享赛题背景链接:https://jdata.jd.com/html/detail.html?id=8
+下面分为以下几个部分：
 
-          
+嗯，写在前面
+特征
+模型
+小tips
+没尝试的点
+从优秀的选手中学习到的1. 嗯，写在前面:初次个人参加数据挖掘比赛，希望能够通过这份总结自
+          ...
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2019/08/12/Jdata/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -456,17 +434,15 @@
       
         
           
-            <p>Welcome to <a href="https://hexo.io/" target="_blank" rel="noopener">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/" target="_blank" rel="noopener">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html" target="_blank" rel="noopener">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo new <span class="string">"My New Post"</span></span><br></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/writing.html" target="_blank" rel="noopener">Writing</a></p>
-<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/server.html" target="_blank" rel="noopener">Server</a></p>
-<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/generating.html" target="_blank" rel="noopener">Generating</a></p>
-<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/deployment.html" target="_blank" rel="noopener">Deployment</a></p>
-
-          
+          Welcome to Hexo! This is your very first post. Check documentation for more info. If you get any problems when using Hexo, you can find the answer in 
+          ...
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2018/11/24/hello-world/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
